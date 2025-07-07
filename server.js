@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const os = require('os');
 
 const cors = require('cors'); 
 const { Pool } = require('pg');
@@ -7,14 +8,14 @@ const apiRoutes = require('./routes/apiRoutes');
 
 // Initialize Express app
 const app = express();
-const port = 3001;
+const port = 5001;
 
 
 
 
 // CORS configuration
 app.use(cors({
-  origin: ['https://sku-management-webapp.windsurf.build', 'https://warehousing-z9wl.onrender.com', 'http://localhost:3000'],
+  origin: true, // Allow all origins (all IPs)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -120,7 +121,18 @@ app.listen(port, () => {
 });
 // GOOD (accessible from your local network)
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on http://192.168.1.45:${port}`);
+  // Get the local network IP address
+  const interfaces = os.networkInterfaces();
+  let localIp = 'localhost';
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        localIp = iface.address;
+        break;
+      }
+    }
+  }
+  console.log(`Server running on http://${localIp}:${port}`);
 });
 
 

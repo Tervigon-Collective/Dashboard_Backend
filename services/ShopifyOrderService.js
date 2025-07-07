@@ -75,6 +75,28 @@ class ShopifyOrderService {
         const avgOrderValue = orderCount ? totalRevenue / orderCount : 0;
         return { orderCount, totalRevenue, avgOrderValue, currency: orders[0]?.totalPriceSet.shopMoney.currencyCode || 'INR' };
     }
+
+    // Net revenue: sum of non-cancelled orders
+    async getNetRevenueStats(startDate, endDate) {
+        const orders = await this.fetchOrders(startDate, endDate);
+        const netRevenue = orders
+            .filter(order => order.cancelledAt==null)
+            .reduce((sum, order) => sum + Number(order.totalPriceSet.shopMoney.amount), 0);
+        const cancelledAmount = orders
+            .filter(order => order.cancelledAt!= null)
+            .reduce((sum, order) => sum + Number(order.totalPriceSet.shopMoney.amount), 0);
+        const totalSales = orders.reduce((sum, order) => sum + Number(order.totalPriceSet.shopMoney.amount), 0);
+        const orderCount = orders.filter(order => !order.cancelledAt).length;
+        const avgOrderValue = orderCount ? netRevenue / orderCount : 0;
+        return {
+            orderCount,
+            netRevenue,
+            cancelledAmount,
+            totalSales,
+            avgOrderValue,
+            currency: orders[0]?.totalPriceSet.shopMoney.currencyCode || 'INR'
+        };
+    }
 }
 
 module.exports = new ShopifyOrderService(); 
