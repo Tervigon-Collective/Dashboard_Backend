@@ -8,7 +8,7 @@ const apiRoutes = require('./routes/apiRoutes');
 
 // Initialize Express app
 const app = express();
-const port = 5001;
+const port = process.env.PORT || 5001;
 
 
 
@@ -117,10 +117,6 @@ app.delete('/product_metrics/:sku_name', async (req, res) => {
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
-// GOOD (accessible from your local network)
-app.listen(port, '0.0.0.0', () => {
   // Get the local network IP address
   const interfaces = os.networkInterfaces();
   let localIp = 'localhost';
