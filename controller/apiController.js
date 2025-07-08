@@ -4,7 +4,6 @@ const dbController = require('./dbController');
 
 // --- Helper Functions ---
 async function fetchTotalSales(startDate, endDate) {
-
     const shopifyDomain = process.env.SHOPIFY_STORE;
     const shopifyToken = process.env.SHOPIFY_PASSWORD;
     const metaSources = ['facebook', 'instagram', 'meta', 'fb', 'ig', '{{site_source_name}}'];
@@ -14,16 +13,9 @@ async function fetchTotalSales(startDate, endDate) {
     let totalSales = 0;
     let hasNextPage = true;
     let endCursor = null;
-    const toISOStringWithTZ = (date, endOfDay = false) => {
-      // console.log("Conversion date" , date , endOfDay)
-        if (endOfDay) {
-            return `${date}T23:59:59.000Z`;
-        } else {
-            return `${date}T00:00:00.000Z`;
-        }
-    };
+    const toISOStringWithTZ = (date, endOfDay = false) => `${date}T${endOfDay ? '23:59:59' : '00:00:00'}+05:30`;
     while (hasNextPage) {
-        const query = `query {\n  orders(\n    first: 50,\n    after: ${endCursor ? `\"${endCursor}\"` : 'null'},\n    reverse: true,\n    query: \"created_at:>='${toISOStringWithTZ(startDate)}' AND created_at<='${toISOStringWithTZ(endDate, true)}'\"\n  ) {\n    pageInfo { hasNextPage endCursor }\n    edges {\n      node {\n        id\n        name\n        createdAt\n        customerJourney {\n          moments {\n            ... on CustomerVisit {\n              utmParameters {\n                source\n                medium\n                campaign\n                content\n                term\n              }\n            }\n          }\n        }\n        lineItems(first: 10) {\n          edges {\n            node {\n              sku\n              quantity\n              originalUnitPriceSet { shopMoney { amount currencyCode } }\n              discountedUnitPriceSet: discountedUnitPriceAfterAllDiscountsSet { shopMoney { amount currencyCode } }\n              variant {\n                id\n                sku\n                inventoryItem { unitCost { amount currencyCode } }\n                selectedOptions { name value }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}`;
+        const query = `query {\n  orders(\n    first: 50,\n    after: ${endCursor ? `\"${endCursor}\"` : 'null'},\n    reverse: true,\n    query: \"created_at:>='${toISOStringWithTZ(startDate)}' AND created_at<'${toISOStringWithTZ(endDate, true)}'\"\n  ) {\n    pageInfo { hasNextPage endCursor }\n    edges {\n      node {\n        id\n        name\n        createdAt\n        customerJourney {\n          moments {\n            ... on CustomerVisit {\n              utmParameters {\n                source\n                medium\n                campaign\n                content\n                term\n              }\n            }\n          }\n        }\n        lineItems(first: 10) {\n          edges {\n            node {\n              sku\n              quantity\n              originalUnitPriceSet { shopMoney { amount currencyCode } }\n              discountedUnitPriceSet: discountedUnitPriceAfterAllDiscountsSet { shopMoney { amount currencyCode } }\n              variant {\n                id\n                sku\n                inventoryItem { unitCost { amount currencyCode } }\n                selectedOptions { name value }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}`;
         const response = await axios.post(
             `https://${shopifyDomain}/admin/api/2023-10/graphql.json`,
             { query, variables: {} },
@@ -34,10 +26,7 @@ async function fetchTotalSales(startDate, endDate) {
                 }
             }
         );
-
-
         const orders = response.data.data.orders.edges;
-        console.log(orders)
         const pageInfo = response.data.data.orders.pageInfo;
         hasNextPage = pageInfo.hasNextPage;
         endCursor = pageInfo.endCursor;
@@ -68,8 +57,6 @@ async function fetchTotalSales(startDate, endDate) {
             }
         }
     }
-    console.log(`fetching total sales for start date: ${startDate} and end date: ${endDate}, total sales: ${totalSales}`);
-
     return { metaSales, googleSales, organicSales, totalSales };
 }
 
@@ -82,15 +69,9 @@ async function fetchTotalCogs(startDate, endDate) {
     let totalCogs = 0;
     let hasNextPage = true;
     let endCursor = null;
-    const toISOStringWithTZ = (date, endOfDay = false) => {
-        if (endOfDay) {
-            return `${date}T23:59:59.000Z`;
-        } else {
-            return `${date}T00:00:00.000Z`;
-        }
-    };
+    const toISOStringWithTZ = (date, endOfDay = false) => `${date}T${endOfDay ? '23:59:59' : '00:00:00'}+05:30`;
     while (hasNextPage) {
-        const query = `query {\n  orders(\n    first: 50,\n    after: ${endCursor ? `\"${endCursor}\"` : 'null'},\n    reverse: true,\n    query: \"created_at:>='${toISOStringWithTZ(startDate)}' AND created_at<='${toISOStringWithTZ(endDate, true)}'\"\n  ) {\n    pageInfo { hasNextPage endCursor }\n    edges {\n      node {\n        id\n        name\n        createdAt\n        customerJourney {\n          moments {\n            ... on CustomerVisit {\n              utmParameters {\n                source\n                medium\n                campaign\n                content\n                term\n              }\n            }\n          }\n        }\n        lineItems(first: 10) {\n          edges {\n            node {\n              sku\n              quantity\n              originalUnitPriceSet { shopMoney { amount currencyCode } }\n              discountedUnitPriceSet: discountedUnitPriceAfterAllDiscountsSet { shopMoney { amount currencyCode } }\n              variant {\n                id\n                sku\n                inventoryItem { unitCost { amount currencyCode } }\n                selectedOptions { name value }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}`;
+        const query = `query {\n  orders(\n    first: 50,\n    after: ${endCursor ? `\"${endCursor}\"` : 'null'},\n    reverse: true,\n    query: \"created_at:>='${toISOStringWithTZ(startDate)}' AND created_at<'${toISOStringWithTZ(endDate, true)}'\"\n  ) {\n    pageInfo { hasNextPage endCursor }\n    edges {\n      node {\n        id\n        name\n        createdAt\n        customerJourney {\n          moments {\n            ... on CustomerVisit {\n              utmParameters {\n                source\n                medium\n                campaign\n                content\n                term\n              }\n            }\n          }\n        }\n        lineItems(first: 10) {\n          edges {\n            node {\n              sku\n              quantity\n              originalUnitPriceSet { shopMoney { amount currencyCode } }\n              discountedUnitPriceSet: discountedUnitPriceAfterAllDiscountsSet { shopMoney { amount currencyCode } }\n              variant {\n                id\n                sku\n                inventoryItem { unitCost { amount currencyCode } }\n                selectedOptions { name value }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}`;
         const response = await axios.post(
             `https://${shopifyDomain}/admin/api/2023-10/graphql.json`,
             { query, variables: {} },
@@ -133,82 +114,63 @@ async function fetchTotalCogs(startDate, endDate) {
 }
 
 async function fetchAllAdSpend(startDate, endDate) {
-    // Logging input dates
-    console.log(`[AdSpend] Fetching ad spend for startDate: ${startDate}, endDate: ${endDate}`);
-    try {
-        // Fetch Google Ads access token dynamically
-        const getGoogleAccessTokenInternal = async () => {
-            const params = new URLSearchParams();
-            params.append('client_id', process.env.GOOGLE_CLIENT_ID);
-            params.append('client_secret', process.env.GOOGLE_CLIENT_SECRET);
-            params.append('grant_type', 'refresh_token');
-            params.append('refresh_token', process.env.GOOGLE_REFRESH_TOKEN);
-            const response = await axios.post(
-                'https://oauth2.googleapis.com/token',
-                params,
-                {
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }                }
-            );
-            return response.data.access_token;
-        };
-        const googleAccessToken = await getGoogleAccessTokenInternal();
-        // Google Ads query for date range
-        const googleQuery = `SELECT metrics.cost_micros FROM customer WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'`;
-        // Logging Google Ads request
-        // console.log(`[AdSpend] Google Ads Query:`, googleQuery);
-        // Google Ads API call
-        const googleAdsPromise = axios.post(
-            `https://googleads.googleapis.com/v20/customers/${process.env.GOOGLE_ADS_CUSTOMER_ID}/googleAds:search`,
-            {
-                query: googleQuery
-            },
+    // Fetch Google Ads access token dynamically
+    const getGoogleAccessTokenInternal = async () => {
+        const params = new URLSearchParams();
+        params.append('client_id', process.env.GOOGLE_CLIENT_ID);
+        params.append('client_secret', process.env.GOOGLE_CLIENT_SECRET);
+        params.append('grant_type', 'refresh_token');
+        params.append('refresh_token', process.env.GOOGLE_REFRESH_TOKEN);
+        const response = await axios.post(
+            'https://oauth2.googleapis.com/token',
+            params,
             {
                 headers: {
-                    'Content-Type': 'application/json',
-                    'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-                    'login-customer-id': process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID,
-                    'Authorization': `Bearer ${googleAccessToken}`
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 }
             }
-        ).then(response => {
-            let costMicros = 0;
-            const data = response.data;
-            if (data && data.results && data.results.length > 0) {
-                costMicros = data.results[0].metrics?.costMicros || data.results[0].metrics?.cost_micros || 0;
+        );
+        return response.data.access_token;
+    };
+    const googleAccessToken = await getGoogleAccessTokenInternal();
+    // Google Ads query for date range
+    const googleQuery = `SELECT metrics.cost_micros FROM customer WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'`;
+    // Google Ads API call
+    const googleAdsPromise = axios.post(
+        `https://googleads.googleapis.com/v20/customers/${process.env.GOOGLE_ADS_CUSTOMER_ID}/googleAds:search`,
+        {
+            query: googleQuery
+        },
+        {
+            headers: {
+                'Content-Type': 'application/json',
+                'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
+                'login-customer-id': process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID,
+                'Authorization': `Bearer ${googleAccessToken}`
             }
-            return Number(costMicros) / 1000000;
-        });
-        // Facebook API call for date range
-        const facebookUrl = `https://graph.facebook.com/v19.0/act_${process.env.FB_AD_ACCOUNT_ID}/insights?fields=spend&level=account&time_range=%7B%22since%22%3A%22${startDate}%22%2C%22until%22%3A%22${endDate}%22%7D&access_token=${process.env.FB_ACCESS_TOKEN}`;
-        // Logging Facebook request
-        // console.log(`[AdSpend] Facebook API URL:`, facebookUrl);
-        const facebookPromise = axios.get(facebookUrl).then(response => {
-            let spend = 0;
-            const data = response.data;
-            if (data && data.data && data.data.length > 0) {
-                spend = Number(data.data[0].spend) || 0;
-            }
-            return spend;
-        });
-        // Wait for both API calls
-        const [googleSpend, facebookSpend] = await Promise.all([googleAdsPromise, facebookPromise]);
-        const totalSpend = googleSpend + facebookSpend;
-        // Logging results
-        // console.log(`[AdSpend] Results for ${startDate} to ${endDate}: Google: ${googleSpend}, Facebook: ${facebookSpend}, Total: ${totalSpend}`);
-        return { googleSpend, facebookSpend, totalSpend };
-    } catch (error) {
-        // Detailed error logging
-        if (error.response) {
-            console.error(`[AdSpend][ERROR] Status: ${error.response.status}`);
-            console.error(`[AdSpend][ERROR] Data:`, JSON.stringify(error.response.data, null, 2));
-            console.error(`[AdSpend][ERROR] Headers:`, JSON.stringify(error.response.headers, null, 2));
-        } else {
-            console.error(`[AdSpend][ERROR]`, error.message);
         }
-        throw error;
-    }
+    ).then(response => {
+        let costMicros = 0;
+        const data = response.data;
+        if (data && data.results && data.results.length > 0) {
+            costMicros = data.results[0].metrics?.costMicros || data.results[0].metrics?.cost_micros || 0;
+        }
+        return Number(costMicros) / 1000000;
+    });
+    // Facebook API call for date range
+    const facebookUrl = `https://graph.facebook.com/v19.0/act_${process.env.FB_AD_ACCOUNT_ID}/insights?fields=spend&level=account&time_range=%7B%22since%22%3A%22${startDate}%22%2C%22until%22%3A%22${endDate}%22%7D&access_token=${process.env.FB_ACCESS_TOKEN}`;
+    const facebookPromise = axios.get(facebookUrl).then(response => {
+        let spend = 0;
+        const data = response.data;
+        if (data && data.data && data.data.length > 0) {
+            spend = Number(data.data[0].spend) || 0;
+        }
+        return spend;
+    });
+    // Wait for both API calls
+    const [googleSpend, facebookSpend] = await Promise.all([googleAdsPromise, facebookPromise]);
+    const totalSpend = googleSpend + facebookSpend;
+    return { googleSpend, facebookSpend, totalSpend };
 }
 
 // Helper to get date range for a timeframe
@@ -220,30 +182,23 @@ function getDateRange(timeframe, req) {
         case 'today':
             start = new Date(today);
             end = new Date(today);
-            console.log(start, end)
             break;
         case 'week':
             end = new Date(today);
             end.setDate(today.getDate() - 1); // yesterday
             start = new Date(end);
             start.setDate(end.getDate() - 6); // last 7 days, not including today
-            console.log(start, end)
-
             break;
         case 'month':
             end = new Date(today);
             end.setDate(today.getDate() - 1); // yesterday
             start = new Date(end);
             start.setDate(end.getDate() - 29); // last 30 days, not including today
-            console.log(start, end)
-
             break;
         case 'year':
             end = new Date(today);
             end.setDate(today.getDate() - 1); // yesterday
             start = new Date(end.getFullYear(), 0, 1); // Jan 1 of this year
-            console.log(start, end)
-
             break;
         case 'custom':
             start = new Date(req.query.startDate);
@@ -267,9 +222,7 @@ function getDateRange(timeframe, req) {
 const getOrdersByTimeframe = async (req, res) => {
     try {
         const { timeframe } = req.params;
-        // console.log(req.params)
         const { startDate, endDate } = getDateRange(timeframe, req);
-        // console.log(startDate , endDate)
         const stats = await ShopifyOrderService.getOrderStats(startDate, endDate);
         res.json(stats);
     } catch (error) {
@@ -366,16 +319,10 @@ const getOrderCount = async (req, res) => {
         let hasNextPage = true;
         let endCursor = null;
         const metaSources = ['facebook', 'instagram', 'meta', 'fb', 'ig', '{{site_source_name}}'];
-        const toISOStringWithTZ = (date, endOfDay = false) => {
-            if (endOfDay) {
-                return `${date}T23:59:59.000Z`;
-            } else {
-                return `${date}T00:00:00.000Z`;
-            }
-        };
+        const toISOStringWithTZ = (date, endOfDay = false) => `${date}T${endOfDay ? '23:59:59' : '00:00:00'}+05:30`;
 
         while (hasNextPage) {
-            const query = `query {\n  orders(\n    first: 50,\n    after: ${endCursor ? `\"${endCursor}\"` : 'null'},\n    reverse: true,\n    query: \"created_at:>='${toISOStringWithTZ(startDate)}' AND created_at<='${toISOStringWithTZ(endDate, true)}'\"\n  ) {\n    pageInfo { hasNextPage endCursor }\n    edges {\n      node {\n        id\n        customerJourney {\n          moments {\n            ... on CustomerVisit {\n              utmParameters {\n                source\n              }\n            }\n          }\n        }\n        lineItems(first: 100) {\n          edges {\n            node {\n              quantity\n            }\n          }\n        }\n      }\n    }\n  }\n}`;
+            const query = `query {\n  orders(\n    first: 50,\n    after: ${endCursor ? `\"${endCursor}\"` : 'null'},\n    reverse: true,\n    query: \"created_at:>='${toISOStringWithTZ(startDate)}' AND created_at<'${toISOStringWithTZ(endDate, true)}'\"\n  ) {\n    pageInfo { hasNextPage endCursor }\n    edges {\n      node {\n        id\n        customerJourney {\n          moments {\n            ... on CustomerVisit {\n              utmParameters {\n                source\n              }\n            }\n          }\n        }\n        lineItems(first: 100) {\n          edges {\n            node {\n              quantity\n            }\n          }\n        }\n      }\n    }\n  }\n}`;
 
             const response = await axios.post(
                 `https://${shopifyDomain}/admin/api/2023-10/graphql.json`,
@@ -720,14 +667,8 @@ const getTopSkusBySales = async (req, res) => {
   }
 };
 
-/**
- * Controller to fetch last N days total spend and total sales
- * GET /last_n_days_spend_and_sales/:timeframe?n=7
- * If timeframe is 'custom', expects req.query.startDate and req.query.endDate (YYYY-MM-DD)
- * If timeframe is 'week' or 'month', returns array of { date, day, spend, revenue }
- * Else returns { totalSpend, totalSales }
- */
-const getLastNDaysSpendAndSalesController = async (req, res) => {
+
+const getNetSalesController = async (req, res) => {
     try {
         const { timeframe } = req.params;
         const n = parseInt(req.query.n, 10) || 7;
@@ -748,21 +689,24 @@ const getLastNDaysSpendAndSalesController = async (req, res) => {
             }
             return arr;
         }
-        if (timeframe === 'week' || timeframe === 'month') {
+        if (timeframe === 'week' || timeframe === 'month' || timeframe === 'today') {
             const dateArr = getDateArray(startDate, endDate);
             const results = [];
             for (const dateObj of dateArr) {
                 const dateStr = dateObj.toISOString().slice(0, 10);
                 try {
-                    const [spendRes, orderStats] = await Promise.all([
+                    const [spendRes, netRevenueStats] = await Promise.all([
                         fetchAllAdSpend(dateStr, dateStr),
-                        ShopifyOrderService.getOrderStats(dateStr + 'T00:00:00Z', dateStr + 'T23:59:59Z')
+                        ShopifyOrderService.getNetRevenueStats(dateStr + 'T00:00:00Z', dateStr + 'T23:59:59Z')
                     ]);
                     results.push({
                         date: dateStr,
                         day: dateObj.toLocaleDateString('en-US', { weekday: 'long' }),
                         spend: spendRes.totalSpend,
-                        revenue: orderStats.totalRevenue
+                        revenue: netRevenueStats.netRevenue,
+                        cancelledAmount: netRevenueStats.cancelledAmount,
+                        totalSales: netRevenueStats.totalSales,
+                        net: netRevenueStats.netRevenue - netRevenueStats.cancelledAmount
                     });
                 } catch (err) {
                     console.error(`Error fetching data for ${dateStr}:`, err.response?.data || err);
@@ -777,14 +721,15 @@ const getLastNDaysSpendAndSalesController = async (req, res) => {
         } else if (timeframe === 'year') {
             // For year, return per-month breakdown
             const year = new Date(startDate).getFullYear();
-            const months = Array.from({ length: 12 }, (_, i) => i); // 0 = Jan, 11 = Dec
+            const now = new Date();
+            const currentMonth = (year === now.getFullYear()) ? now.getMonth() : 11; // 0-based, up to current month if this year, else all months
+            const months = Array.from({ length: currentMonth + 1 }, (_, i) => i); // 0 = Jan, ...
             const results = [];
             for (const monthIdx of months) {
                 const monthStart = new Date(Date.UTC(year, monthIdx, 1));
                 const monthEnd = new Date(Date.UTC(year, monthIdx + 1, 0)); // last day of month
                 const startStr = monthStart.toISOString().slice(0, 10) + 'T00:00:00Z';
                 const endStr = monthEnd.toISOString().slice(0, 10) + 'T23:59:59Z';
-                console.log(startStr , endStr)
                 try {
                     const [netRevenueStats, spendRes] = await Promise.all([
                         ShopifyOrderService.getNetRevenueStats(startStr, endStr),
@@ -832,5 +777,23 @@ const getLastNDaysSpendAndSalesController = async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch spend and sales', details: error.message });
     }
 };
+const getLatestOrdersController = async (req, res) => {
+    try {
+        const n = parseInt(req.query.n, 10) || 10;
+        // Fetch all orders for a recent large range (e.g., last 90 days)
+        const today = new Date();
+        const endDate = today.toISOString().slice(0, 10) + 'T23:59:59Z';
+        const startDateObj = new Date(today);
+        startDateObj.setDate(today.getDate() - 90);
+        const startDate = startDateObj.toISOString().slice(0, 10) + 'T00:00:00Z';
+        const orders = await ShopifyOrderService.fetchOrders(startDate, endDate);
+        // Sort by createdAt descending and take top n
+        const sorted = orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        res.json(sorted.slice(0, n));
+    } catch (error) {
+        console.log("Error in fetching latest orders: ", error);
+        res.status(500).json({ error: 'Failed to fetch latest orders', details: error.message });
+    }
+};
 
-module.exports = { getAllAdSpend, getTotalCogs, getNetProfit, getTotalSales, getOrderCount, getRoas, getOrdersByTimeframe, getLastNDaysNetProfitController: dbController.getLastNDaysNetProfitController, getOrderCountByProvince, getOrderSalesByProvince, getTopSkusBySales, getLastNDaysSpendAndSalesController };
+module.exports = { getAllAdSpend, getTotalCogs, getNetProfit, getTotalSales, getOrderCount, getRoas, getOrdersByTimeframe, getLastNDaysNetProfitController: dbController.getLastNDaysNetProfitController, getOrderCountByProvince, getOrderSalesByProvince, getTopSkusBySales, getNetSalesController, getLatestOrdersController };

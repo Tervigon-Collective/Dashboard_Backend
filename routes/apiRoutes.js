@@ -14,6 +14,7 @@ router.get('/net_profit_daily', apiController.getLastNDaysNetProfitController);
 router.get('/order_count_by_province', apiController.getOrderCountByProvince);
 router.get('/order_sales_by_province', apiController.getOrderSalesByProvince);
 router.get('/top_skus_by_sales', apiController.getTopSkusBySales);
-router.get('/last_n_days_spend_and_sales/:timeframe', apiController.getLastNDaysSpendAndSalesController);
+router.get('/net_sales/:timeframe', apiController.getNetSalesController);
+router.get('/latest_orders', apiController.getLatestOrdersController);
 
 module.exports = router;
