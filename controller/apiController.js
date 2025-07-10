@@ -789,7 +789,27 @@ const getLatestOrdersController = async (req, res) => {
         const orders = await ShopifyOrderService.fetchOrders(startDate, endDate);
         // Sort by createdAt descending and take top n
         const sorted = orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        res.json(sorted.slice(0, n));
+        // Convert createdAt to IST for each order and add region data
+        const withIST = sorted.slice(0, n).map(order => {
+            const ist = new Date(order.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+            const region = order.shippingAddress ? {
+                province: order.shippingAddress.province || null,
+                country: order.shippingAddress.country || null,
+                city: order.shippingAddress.city || null
+            } : {};
+            // Extract SKUs and quantities from lineItems
+            const skus = (order.lineItems?.edges || []).map(item => ({
+                sku: item.node.variant?.sku || null,
+                quantity: item.node.quantity || 0
+            }));
+            return {
+                ...order,
+                createdAtIST: ist,
+                region,
+                skus
+            };
+        });
+        res.json(withIST);
     } catch (error) {
         console.log("Error in fetching latest orders: ", error);
         res.status(500).json({ error: 'Failed to fetch latest orders', details: error.message });

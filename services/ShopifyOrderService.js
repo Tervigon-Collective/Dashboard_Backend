@@ -23,11 +23,51 @@ class ShopifyOrderService {
                     edges {
                         node {
                             id
+                            name
                             createdAt
+                            processedAt
+                            updatedAt
+                            closedAt
                             totalPriceSet {
                                 shopMoney {
                                     amount
                                     currencyCode
+                                }
+                            }
+                            cancelledAt
+                            shippingAddress {
+                                city
+                                province
+                                country
+                            }
+                            lineItems(first: 10) {
+                                edges {
+                                    node {
+                                        id
+                                        title
+                                        quantity
+                                        originalUnitPriceSet {
+                                            shopMoney {
+                                                amount
+                                                currencyCode
+                                            }
+                                        }
+                                        variant {
+                                            id
+                                            title
+                                            sku
+                                            image {
+                                                originalSrc
+                                                altText
+                                            }
+                                            product {
+                                                id
+                                                title
+                                                vendor
+                                                handle
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -94,6 +134,10 @@ class ShopifyOrderService {
                                     currencyCode
                                 }
                             }
+                                 customer {
+                                 defaultAddress {
+                                        province
+                                        provinceCode
                             cancelledAt
                         }
                     }
