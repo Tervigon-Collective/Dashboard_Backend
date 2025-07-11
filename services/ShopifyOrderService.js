@@ -19,7 +19,7 @@ class ShopifyOrderService {
         let orders = [];
         const queryTemplate = `
             query getOrders($query: String!, $first: Int!, $after: String) {
-                orders(query: $query, first: $first, after: $after) {
+                orders(query: $query, first: $first, after: $after, reverse: true, sortKey: CREATED_AT) {
                     edges {
                         node {
                             id
