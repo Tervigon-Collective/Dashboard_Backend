@@ -50,68 +50,115 @@ app.get('/', (req, res) => {
   res.send('Server is running');
 });
 
-// Fetch all product metrics
+// Fetch all product metrics (now from variants_tt joined with products_tt)
 app.get('/product_metrics', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM product_metrics');
-    res.json(result.rows);
+    const result = await pool.query(`
+      SELECT
+        v.variant_title,
+        v.sku as SKU_Name,
+        v.price as Selling_Price,
+        v.unit_cost as Cogs,
+        p.title AS product_name
+      FROM
+        public.variants_tt AS v
+      JOIN
+        public.products_tt AS p
+      ON
+        v.product_id = p.product_id;
+    `);
+
+    // Calculate margin for each row and add it to the response
+    const rowsWithMargin = result.rows.map(row => {
+      // Margin = (Selling_Price - Cogs) / Selling_Price * 100 (as percent)
+      const sellingPrice = parseFloat(row.selling_price ?? row.selling_Price);
+      const cogs = parseFloat(row.cogs ?? row.Cogs);
+      let margin = null;
+      if (sellingPrice && !isNaN(sellingPrice) && !isNaN(cogs) && sellingPrice !== 0) {
+        margin = (sellingPrice - cogs);
+      }
+      return {
+        ...row,
+        margin: margin !== null ? Number(margin.toFixed(2)) : null
+      };
+    });
+
+    res.json(rowsWithMargin);
   } catch (error) {
     console.error(error);
     res.status(500).send('Server Error');
   }
 });
 
-// Create a new product metric
+// Create a new product variant (product metric)
 app.post('/product_metrics', async (req, res) => {
-  const { product_name, size, sku_name, selling_price, per_bottle_cost, net_margin } = req.body; 
+  const { product_name, variant_title, sku_name, selling_price, cogs } = req.body;
   try {
+    // Find product_id from products_tt by product_name
+    const productResult = await pool.query(
+      'SELECT product_id FROM products_tt WHERE title = $1',
+      [product_name]
+    );
+    if (productResult.rows.length === 0) {
+      return res.status(400).send('Product not found');
+    }
+    const product_id = productResult.rows[0].product_id;
+    // Insert into variants_tt
     const result = await pool.query(
-      'INSERT INTO product_metrics (product_name, size, sku_name, selling_price, per_bottle_cost, net_margin) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [product_name, size, sku_name, selling_price, per_bottle_cost, net_margin]
+      'INSERT INTO variants_tt (product_id, variant_title, sku, price, unit_cost) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [product_id, variant_title, sku_name, selling_price, cogs]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error(error);
-    res.status(500).send('Error creating product metric');
+    res.status(500).send('Error creating product variant');
   }
 });
 
-
-
-// Update an existing product metric
+// Update an existing product variant (by SKU)
 app.put('/product_metrics/:sku_name', async (req, res) => {
   const { sku_name } = req.params;
-  const { product_name, size, selling_price, per_bottle_cost, net_margin } = req.body;
+  const { product_name, variant_title, selling_price, cogs } = req.body;
   try {
+    // Find product_id from products_tt by product_name
+    const productResult = await pool.query(
+      'SELECT product_id FROM products_tt WHERE title = $1',
+      [product_name]
+    );
+    if (productResult.rows.length === 0) {
+      return res.status(400).send('Product not found');
+    }
+    const product_id = productResult.rows[0].product_id;
+    // Update variants_tt
     const result = await pool.query(
-      'UPDATE product_metrics SET product_name = $1, size = $2, selling_price = $3, per_bottle_cost = $4, net_margin = $5 WHERE sku_name = $6 RETURNING *',
-      [product_name, size, selling_price, per_bottle_cost, net_margin, sku_name]
+      'UPDATE variants_tt SET product_id = $1, variant_title = $2, price = $3, unit_cost = $4 WHERE sku = $5 RETURNING *',
+      [product_id, variant_title, selling_price, cogs, sku_name]
     );
     if (result.rows.length === 0) {
-      return res.status(404).send('Product metric not found');
+      return res.status(404).send('Product variant not found');
     }
     res.json(result.rows[0]);
   } catch (error) {
     console.error(error);
-    res.status(500).send('Error updating product metric');
+    res.status(500).send('Error updating product variant');
   }
 });
 
-// Delete a product metric
+// Delete a product variant (by SKU)
 app.delete('/product_metrics/:sku_name', async (req, res) => {
   const { sku_name } = req.params;
   try {
     const result = await pool.query(
-      'DELETE FROM product_metrics WHERE sku_name = $1 RETURNING *',
+      'DELETE FROM variants_tt WHERE sku = $1 RETURNING *',
       [sku_name]
     );
     if (result.rows.length === 0) {
-      return res.status(404).send('Product metric not found');
+      return res.status(404).send('Product variant not found');
     }
-    res.send('Product metric deleted');
+    res.send('Product variant deleted');
   } catch (error) {
     console.error(error);
-    res.status(500).send('Error deleting product metric');
+    res.status(500).send('Error deleting product variant');
   }
 });
 
