@@ -779,14 +779,16 @@ const getNetSalesController = async (req, res) => {
 };
 const getLatestOrdersController = async (req, res) => {
     try {
-        const n = parseInt(req.query.n, 10) || 10;
+        // Accept N from either route param or query param
+        const n = parseInt(req.params.n || req.query.n, 10) || 10;
         // Fetch all orders for a recent large range (e.g., last 90 days)
         const today = new Date();
         const endDate = today.toISOString().slice(0, 10) + 'T23:59:59Z';
         const startDateObj = new Date(today);
         startDateObj.setDate(today.getDate() - 90);
         const startDate = startDateObj.toISOString().slice(0, 10) + 'T00:00:00Z';
-        const orders = await ShopifyOrderService.fetchOrders(startDate, endDate);
+        // Pass n to fetchOrders for optimization
+        const orders = await ShopifyOrderService.fetchOrders(startDate, endDate, n);
         // Sort by createdAt descending and take top n
         const sorted = orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         // Convert createdAt to IST for each order and add region data

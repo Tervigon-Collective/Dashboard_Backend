@@ -13,7 +13,7 @@ class ShopifyOrderService {
     }
 
     // Main fetcher with pagination and field limiting
-    async fetchOrders(startDate, endDate) {
+    async fetchOrders(startDate, endDate, limit) {
         let hasNextPage = true;
         let endCursor = null;
         let orders = [];
@@ -83,9 +83,12 @@ class ShopifyOrderService {
         const queryString = this.buildDateRangeQuery(startDate, endDate);
 
         while (hasNextPage) {
+            // If limit is set, only fetch up to the remaining needed
+            const fetchCount = limit ? Math.min(250, limit - orders.length) : 250;
+            if (limit && orders.length >= limit) break;
             const variables = {
                 query: queryString,
-                first: 250, // Shopify max for best performance
+                first: fetchCount, // Shopify max for best performance
                 after: endCursor
             };
             const response = await axios.post(
@@ -103,8 +106,11 @@ class ShopifyOrderService {
             orders = orders.concat(data.edges.map(edge => edge.node));
             hasNextPage = data.pageInfo.hasNextPage;
             endCursor = data.pageInfo.endCursor;
+            // Stop if we've reached the limit
+            if (limit && orders.length >= limit) break;
         }
-        return orders;
+        // Only return up to the limit if set
+        return limit ? orders.slice(0, limit) : orders;
     }
 
     // Aggregation example: total revenue, order count, average order value
@@ -134,11 +140,13 @@ class ShopifyOrderService {
                                     currencyCode
                                 }
                             }
-                                 customer {
-                                 defaultAddress {
-                                        province
-                                        provinceCode
                             cancelledAt
+                            customer {
+                                defaultAddress {
+                                    province
+                                    provinceCode
+                                }
+                            }
                         }
                     }
                     pageInfo {
