@@ -13,7 +13,7 @@ async function fetchTotalSales(startDate, endDate) {
     let totalSales = 0;
     let hasNextPage = true;
     let endCursor = null;
-    const toISOStringWithTZ = (date, endOfDay = false) => `${date}T${endOfDay ? '23:59:59' : '00:00:00'}+05:30`;
+    const toISOStringWithTZ = (date, endOfDay = false) => `${date}T${endOfDay ? '23:59:59' : '00:00:00'}Z`;
     while (hasNextPage) {
         const query = `query {\n  orders(\n    first: 50,\n    after: ${endCursor ? `\"${endCursor}\"` : 'null'},\n    reverse: true,\n    query: \"created_at:>='${toISOStringWithTZ(startDate)}' AND created_at<'${toISOStringWithTZ(endDate, true)}'\"\n  ) {\n    pageInfo { hasNextPage endCursor }\n    edges {\n      node {\n        id\n        name\n        createdAt\n        customerJourney {\n          moments {\n            ... on CustomerVisit {\n              utmParameters {\n                source\n                medium\n                campaign\n                content\n                term\n              }\n            }\n          }\n        }\n        lineItems(first: 10) {\n          edges {\n            node {\n              sku\n              quantity\n              originalUnitPriceSet { shopMoney { amount currencyCode } }\n              discountedUnitPriceSet: discountedUnitPriceAfterAllDiscountsSet { shopMoney { amount currencyCode } }\n              variant {\n                id\n                sku\n                inventoryItem { unitCost { amount currencyCode } }\n                selectedOptions { name value }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}`;
         const response = await axios.post(
@@ -69,7 +69,7 @@ async function fetchTotalCogs(startDate, endDate) {
     let totalCogs = 0;
     let hasNextPage = true;
     let endCursor = null;
-    const toISOStringWithTZ = (date, endOfDay = false) => `${date}T${endOfDay ? '23:59:59' : '00:00:00'}+05:30`;
+    const toISOStringWithTZ = (date, endOfDay = false) => `${date}T${endOfDay ? '23:59:59' : '00:00:00'}Z`;
     while (hasNextPage) {
         const query = `query {\n  orders(\n    first: 50,\n    after: ${endCursor ? `\"${endCursor}\"` : 'null'},\n    reverse: true,\n    query: \"created_at:>='${toISOStringWithTZ(startDate)}' AND created_at<'${toISOStringWithTZ(endDate, true)}'\"\n  ) {\n    pageInfo { hasNextPage endCursor }\n    edges {\n      node {\n        id\n        name\n        createdAt\n        customerJourney {\n          moments {\n            ... on CustomerVisit {\n              utmParameters {\n                source\n                medium\n                campaign\n                content\n                term\n              }\n            }\n          }\n        }\n        lineItems(first: 10) {\n          edges {\n            node {\n              sku\n              quantity\n              originalUnitPriceSet { shopMoney { amount currencyCode } }\n              discountedUnitPriceSet: discountedUnitPriceAfterAllDiscountsSet { shopMoney { amount currencyCode } }\n              variant {\n                id\n                sku\n                inventoryItem { unitCost { amount currencyCode } }\n                selectedOptions { name value }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}`;
         const response = await axios.post(
@@ -285,14 +285,24 @@ const getNetProfit = async (req, res) => {
         if (!startDate) startDate = today;
         if (!endDate) endDate = today;
         const salesRes = await fetchTotalSales(startDate, endDate);
+        console.log(salesRes);
         const cogsRes = await fetchTotalCogs(startDate, endDate);
+        console.log(cogsRes);
         const adSpendRes = await fetchAllAdSpend(startDate, endDate);
+        console.log(adSpendRes);
+        
+        // Calculate organic COGS (total COGS - meta COGS - google COGS)
+        const organicCogs = (cogsRes.totalCogs || 0) - (cogsRes.metaCogs || 0) - (cogsRes.googleCogs || 0);
+        
         const metaNetProfit = (salesRes.metaSales || 0) - (cogsRes.metaCogs || 0) - (adSpendRes.facebookSpend || 0);
         const googleNetProfit = (salesRes.googleSales || 0) - (cogsRes.googleCogs || 0) - (adSpendRes.googleSpend || 0);
-        const totalNetProfit = (salesRes.totalSales || 0) - (cogsRes.totalCogs || 0) - (adSpendRes.totalSpend || 0);
+        const organicNetProfit = (salesRes.organicSales || 0) - organicCogs; // No ad spend for organic
+        const totalNetProfit = metaNetProfit + googleNetProfit + organicNetProfit; // Sum of all net profits
+        
         res.json({
             metaNetProfit,
             googleNetProfit,
+            organicNetProfit,
             totalNetProfit
         });
     } catch (error) {
@@ -319,7 +329,7 @@ const getOrderCount = async (req, res) => {
         let hasNextPage = true;
         let endCursor = null;
         const metaSources = ['facebook', 'instagram', 'meta', 'fb', 'ig', '{{site_source_name}}'];
-        const toISOStringWithTZ = (date, endOfDay = false) => `${date}T${endOfDay ? '23:59:59' : '00:00:00'}+05:30`;
+        const toISOStringWithTZ = (date, endOfDay = false) => `${date}T${endOfDay ? '23:59:59' : '00:00:00'}Z`;
 
         while (hasNextPage) {
             const query = `query {\n  orders(\n    first: 50,\n    after: ${endCursor ? `\"${endCursor}\"` : 'null'},\n    reverse: true,\n    query: \"created_at:>='${toISOStringWithTZ(startDate)}' AND created_at<'${toISOStringWithTZ(endDate, true)}'\"\n  ) {\n    pageInfo { hasNextPage endCursor }\n    edges {\n      node {\n        id\n        customerJourney {\n          moments {\n            ... on CustomerVisit {\n              utmParameters {\n                source\n              }\n            }\n          }\n        }\n        lineItems(first: 100) {\n          edges {\n            node {\n              quantity\n            }\n          }\n        }\n      }\n    }\n  }\n}`;
@@ -818,4 +828,27 @@ const getLatestOrdersController = async (req, res) => {
     }
 };
 
-module.exports = { getAllAdSpend, getTotalCogs, getNetProfit, getTotalSales, getOrderCount, getRoas, getOrdersByTimeframe, getLastNDaysNetProfitController: dbController.getLastNDaysNetProfitController, getOrderCountByProvince, getOrderSalesByProvince, getTopSkusBySales, getNetSalesController, getLatestOrdersController };
+const getSourceVisitorsByTimeframe = async (req, res) => {
+    try {
+        const { timeframe } = req.params;
+        const { startDate, endDate } = getDateRange(timeframe, req);
+        
+        // Convert dates to the format expected by Shopify API
+        const startDateFormatted = startDate + 'T00:00:00Z';
+        const endDateFormatted = endDate + 'T23:59:59Z';
+        
+        const result = await ShopifyOrderService.fetchSourceVisitors(startDateFormatted, endDateFormatted);
+        
+        res.json({
+            timeframe,
+            startDate,
+            endDate,
+            ...result
+        });
+    } catch (error) {
+        console.error('Error in fetching source visitors:', error);
+        res.status(500).json({ error: 'Failed to fetch source visitors', details: error.message });
+    }
+};
+
+module.exports = { getAllAdSpend, getTotalCogs, getNetProfit, getTotalSales, getOrderCount, getRoas, getOrdersByTimeframe, getLastNDaysNetProfitController: dbController.getLastNDaysNetProfitController, getOrderCountByProvince, getOrderSalesByProvince, getTopSkusBySales, getNetSalesController, getLatestOrdersController, getSourceVisitorsByTimeframe };

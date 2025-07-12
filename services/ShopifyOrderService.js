@@ -206,6 +206,141 @@ class ShopifyOrderService {
             currency: orders[0]?.totalPriceSet.shopMoney.currencyCode || 'INR'
         };
     }
+
+    // Fetch source visitors and count unique sources
+    async fetchSourceVisitors(startDate, endDate) {
+        let hasNextPage = true;
+        let endCursor = null;
+        let orders = [];
+        const queryTemplate = `
+            query getOrders($query: String!, $first: Int!, $after: String) {
+                orders(query: $query, first: $first, after: $after, reverse: true) {
+                    edges {
+                        node {
+                            id
+                            name
+                            createdAt
+                            customerJourney {
+                                moments {
+                                    ... on CustomerVisit {
+                                        utmParameters {
+                                            source
+                                            medium
+                                            campaign
+                                            content
+                                            term
+                                        }
+                                    }
+                                }
+                            }
+                            lineItems(first: 10) {
+                                edges {
+                                    node {
+                                        id
+                                        title
+                                        sku
+                                        quantity
+                                        originalUnitPriceSet {
+                                            shopMoney { 
+                                                amount 
+                                                currencyCode 
+                                            }
+                                        }
+                                        discountedUnitPriceAfterAllDiscountsSet {
+                                            shopMoney { 
+                                                amount 
+                                                currencyCode 
+                                            }
+                                        }
+                                        variant {
+                                            id
+                                            sku
+                                            inventoryItem {
+                                                unitCost { 
+                                                    amount 
+                                                    currencyCode 
+                                                }
+                                            }
+                                            selectedOptions {
+                                                name
+                                                value
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
+                }
+            }
+        `;
+        
+        const queryString = this.buildDateRangeQuery(startDate, endDate);
+        const sourceCounts = {};
+        const uniqueSources = new Set();
+
+        try {
+            while (hasNextPage) {
+                const variables = {
+                    query: queryString,
+                    first: 50,
+                    after: endCursor
+                };
+                const response = await axios.post(
+                    `https://${this.shopifyDomain}/admin/api/2023-10/graphql.json`,
+                    { query: queryTemplate, variables },
+                    {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Shopify-Access-Token': this.shopifyToken
+                        }
+                    }
+                );
+                
+                if (!response.data || !response.data.data || !response.data.data.orders) {
+                    console.error('Shopify API error or unexpected response:', JSON.stringify(response.data, null, 2));
+                    throw new Error('Shopify API did not return orders data');
+                }
+                
+                const data = response.data.data.orders;
+                orders = orders.concat(data.edges.map(edge => edge.node));
+                
+                // Process each order to extract the first source
+                data.edges.forEach(edge => {
+                    const order = edge.node;
+                    if (order.customerJourney && order.customerJourney.moments && order.customerJourney.moments.length > 0) {
+                        // Get the first moment with UTM parameters
+                        const firstMoment = order.customerJourney.moments.find(moment => 
+                            moment.utmParameters && moment.utmParameters.source
+                        );
+                        
+                        if (firstMoment && firstMoment.utmParameters.source) {
+                            const source = firstMoment.utmParameters.source;
+                            sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+                            uniqueSources.add(source);
+                        }
+                    }
+                });
+                
+                hasNextPage = data.pageInfo.hasNextPage;
+                endCursor = data.pageInfo.endCursor;
+            }
+        } catch (err) {
+            console.error('Error fetching source visitors:', err.message);
+            throw err;
+        }
+
+        return {
+            orders: orders,
+            sourceCounts: sourceCounts,
+            uniqueSourceCount: uniqueSources.size,
+            uniqueSources: Array.from(uniqueSources)
+        };
+    }
 }
 
 module.exports = new ShopifyOrderService(); 

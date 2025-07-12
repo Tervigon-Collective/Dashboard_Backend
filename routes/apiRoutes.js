@@ -5,7 +5,7 @@ const apiController = require('../controller/apiController');
 
 router.get("/ad_spend", getAllAdSpend);
 router.get("/cogs", getTotalCogs);
-router.get("/net_profit", getNetProfit);
+router.get("/net_profit", getNetProfit); // logical/calculation error
 router.get("/order_count", getOrderCount);
 router.get("/sales", getTotalSales);
 router.get("/roas" , getRoas)
@@ -16,5 +16,6 @@ router.get('/order_sales_by_province', apiController.getOrderSalesByProvince);
 router.get('/top_skus_by_sales', apiController.getTopSkusBySales);
 router.get('/net_sales/:timeframe', apiController.getNetSalesController);
 router.get('/latest_orders', apiController.getLatestOrdersController);
+router.get('/source_visitor/:timeframe', apiController.getSourceVisitorsByTimeframe);
 
 module.exports = router;

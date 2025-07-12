@@ -18,6 +18,7 @@ This backend provides RESTful API endpoints for order analytics, sales, COGS, ad
 - **Params:**
   - `:timeframe` (path): `today`, `week`, `month`, `year`, or `custom`
   - If `custom`, use `?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
+  - http://localhost:8080/api/orders/custom?startDate=2025-07-05&endDate=2025-07-12
 - **Response:**
   - `{ orderCount, totalRevenue, avgOrderValue, currency }`
 
@@ -42,6 +43,7 @@ This backend provides RESTful API endpoints for order analytics, sales, COGS, ad
 - **Params:**
   - `n` (query, optional): Number of SKUs (default 10)
   - `date` or `start_date`/`end_date` (query): Date or range
+  - http://localhost:8080/api/top_skus_by_sales?start_date=2025-07-05&end_date=2025-07-12&n=5
 - **Response:**
   - Array: `[ { sku, total_sales } ]`
 
@@ -49,6 +51,7 @@ This backend provides RESTful API endpoints for order analytics, sales, COGS, ad
 - **Description:** Get order and item count breakdown by source for a date range.
 - **Params:**
   - `startDate`, `endDate` (query, optional): Defaults to today
+  - http://localhost:8080/api/order_count?startDate=2025-07-01&endDate=2025-07-12
 - **Response:**
   - `{ orderCount, totalQuantity, metaQuantity, googleQuantity, organicQuantity }`
 
@@ -56,6 +59,7 @@ This backend provides RESTful API endpoints for order analytics, sales, COGS, ad
 - **Description:** Get order count per province for a date or date range.
 - **Params:**
   - `date` or `start_date`/`end_date` (query)
+  - http://localhost:8080/api/order_count_by_province?start_date=2025-07-01&end_date=2025-07-12
 - **Response:**
   - Array: `[ { province, order_quantity } ]`
 
@@ -63,6 +67,7 @@ This backend provides RESTful API endpoints for order analytics, sales, COGS, ad
 - **Description:** Get total sales per province for a date or date range.
 - **Params:**
   - `date` or `start_date`/`end_date` (query)
+  - http://localhost:8080/api/order_sales_by_province?start_date=2025-07-01&end_date=2025-07-12
 - **Response:**
   - Array: `[ { province, total_sales } ]`
 
@@ -79,6 +84,7 @@ This backend provides RESTful API endpoints for order analytics, sales, COGS, ad
 - **Description:** Get total cost of goods sold (COGS) breakdown for a date range.
 - **Params:**
   - `startDate`, `endDate` (query, optional): Defaults to today
+  - http://localhost:8080/api/cogs?startDate=2025-07-01&endDate=2025-07-12
 - **Response:**
   - `{ metaCogs, googleCogs, totalCogs }`
 
@@ -86,6 +92,7 @@ This backend provides RESTful API endpoints for order analytics, sales, COGS, ad
 - **Description:** Get total ad spend (Google + Facebook) for a date range.
 - **Params:**
   - `startDate`, `endDate` (query, optional): Defaults to today
+   - http://localhost:8080/api/ad_spend?startDate=2025-07-01&endDate=2025-07-12
 - **Response:**
   - `{ googleSpend, facebookSpend, totalSpend }`
 
@@ -100,6 +107,7 @@ This backend provides RESTful API endpoints for order analytics, sales, COGS, ad
 - **Description:** Get Return on Ad Spend (ROAS) for Meta, Google, and total, for a date range.
 - **Params:**
   - `startDate`, `endDate` (query, optional): Defaults to today
+  - http://localhost:8080/api/roas?startDate=2025-07-01&endDate=2025-07-12
 - **Response:**
   - `{ meta: { grossRoas, netRoas, beRoas }, google: {...}, total: {...} }`
 
